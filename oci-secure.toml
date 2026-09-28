@@ -1,0 +1,26 @@
+[build]
+image = "oci-secure-demo:local"
+context = "examples/hello-api"
+dockerfile = "examples/hello-api/Dockerfile"
+platforms = ["linux/amd64"]
+cache_dir = ".buildx-cache"
+
+[build.args]
+SOURCE_URL = "https://github.com/DaBestCode/oci-secure-builder"
+
+[policy]
+ignore_unfixed = true
+require_non_root = true
+require_healthcheck = true
+required_labels = [
+  "org.opencontainers.image.source",
+  "org.opencontainers.image.revision",
+  "org.opencontainers.image.created",
+]
+
+[policy.maximum]
+critical = 0
+high = 0
+medium = 25
+low = -1
+unknown = 0

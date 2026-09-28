@@ -1,0 +1,51 @@
+name: Build and security policy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e . pytest ruff
+      - run: ruff check .
+      - run: pytest
+
+  container-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: docker/setup-buildx-action@v4
+      - uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          version: v0.74.0
+          cache: true
+      - run: python -m pip install -e .
+      - run: oci-secure pipeline --report reports/trivy.json
+      - name: Create GitHub security report
+        if: always()
+        run: trivy image --format sarif --output reports/trivy.sarif oci-secure-demo:local
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: reports/trivy.sarif
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: security-reports
+          path: reports/
