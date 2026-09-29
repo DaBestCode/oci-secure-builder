@@ -27,16 +27,16 @@ jobs:
 
       - name: Pack chiselled Rock
         id: pack
-        uses: canonical/craft-actions/rockcraft/pack@v1
+        uses: canonical/craft-actions/rockcraft/pack@v0
         with:
           path: examples/hello-api
-          channel: latest/stable
+          rockcraft-channel: latest/stable
           verbosity: brief
 
       - name: Import OCI archive into Docker
         run: >-
           sudo rockcraft.skopeo --insecure-policy copy
-          oci-archive:${{ steps.pack.outputs.rocks }}
+          oci-archive:${{ steps.pack.outputs.rock }}
           docker-daemon:oci-secure-demo:rock
 
       - uses: actions/setup-python@v7
@@ -74,6 +74,5 @@ jobs:
         with:
           name: rockcraft-evidence
           path: |
-            ${{ steps.pack.outputs.rocks }}
+            ${{ steps.pack.outputs.rock }}
             reports/
-
