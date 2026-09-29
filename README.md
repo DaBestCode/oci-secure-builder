@@ -22,6 +22,9 @@ interview rather than leaving the security claims as prose on a resume.
   checked, preventing a misleading `USER` declaration from passing on its own.
 - **Supply-chain workflow:** GitHub Actions tests every change, uploads SARIF to
   code scanning, and publishes to GHCR only after the release scan succeeds.
+- **Rockcraft comparison:** the same API is also built from a bare base with
+  Chisel slices, supervised by Pebble, scanned by the same policy, and verified
+  through a Rock-aware runtime gate.
 
 ## Architecture
 
@@ -87,6 +90,8 @@ oci-secure scan --report reports/trivy.json
 oci-secure verify
 oci-secure pipeline
 oci-secure benchmark oci-secure-demo:baseline oci-secure-demo:local
+oci-secure compare oci-secure-demo:local oci-secure-demo:rock
+oci-secure verify-rock oci-secure-demo:rock
 ```
 
 Edit `oci-secure.toml` to change the context, tag, platform, labels, and allowed
@@ -103,6 +108,11 @@ excluded from the blocking count.
 4. Change `USER 10001:10001` to `USER root`, rebuild, and show `verify` fail.
 5. Open the Actions run and its downloadable Trivy report; explain that a tag
    can reach GHCR only after the same security gate passes.
+
+For a container-focused interview, continue with the
+[Docker versus Rockcraft experiment](docs/rockcraft-comparison.md). It packages
+the same API with a bare base, Chisel slices and a Pebble service, then records
+the size, user, entrypoint, layers, health model and scan results in CI.
 
 ## Design trade-offs
 
@@ -121,7 +131,9 @@ excluded from the blocking count.
 src/oci_secure/           CLI, builder, scanner, verifier, benchmark
 tests/                    isolated policy and configuration tests
 examples/hello-api/       hardened and baseline Ubuntu images
+                          plus the equivalent rockcraft.yaml
 .github/workflows/        continuous policy gate and release publishing
+                          plus Rock packing and comparison
 oci-secure.toml           build and security policy as code
 scripts/demo.sh           reproducible end-to-end interview demo
 ```

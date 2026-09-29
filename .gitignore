@@ -12,4 +12,6 @@ build/
 .buildx-cache/
 build-metadata.json
 reports/
+*.rock
+work/
 .DS_Store

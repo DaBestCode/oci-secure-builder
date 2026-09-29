@@ -10,6 +10,8 @@ from .benchmark import compare_images
 from .builder import ImageBuilder
 from .config import load_config
 from .errors import OciSecureError
+from .profile import profile_images
+from .rock import RockVerifier
 from .scanner import VulnerabilityScanner
 from .verifier import RuntimeVerifier
 
@@ -27,6 +29,7 @@ def parser() -> argparse.ArgumentParser:
         "scan", help="scan an image with Trivy and enforce severity budgets"
     )
     scan.add_argument("--report", type=Path, default=Path("reports/trivy.json"))
+    scan.add_argument("--image", help="override the image configured in TOML")
     commands.add_parser(
         "verify", help="check OCI metadata, healthcheck, and runtime UID"
     )
@@ -37,6 +40,16 @@ def parser() -> argparse.ArgumentParser:
     )
     benchmark.add_argument("baseline")
     benchmark.add_argument("optimized")
+    compare = commands.add_parser(
+        "compare", help="compare OCI size, user, entrypoint, layers, and healthcheck"
+    )
+    compare.add_argument("images", nargs="+")
+    rock = commands.add_parser(
+        "verify-rock", help="verify Pebble, non-root execution, and Rock readiness"
+    )
+    rock.add_argument("image")
+    rock.add_argument("--health-url", default="http://127.0.0.1:8080/health")
+    rock.add_argument("--attempts", type=int, default=15)
     return root
 
 
@@ -50,14 +63,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "benchmark":
             _print(asdict(compare_images(args.baseline, args.optimized)))
             return 0
+        if args.command == "compare":
+            _print({"images": [asdict(item) for item in profile_images(args.images)]})
+            return 0
+        if args.command == "verify-rock":
+            verified = RockVerifier().verify(
+                args.image, health_url=args.health_url, attempts=args.attempts
+            )
+            _print({"stage": "verify-rock", "status": "passed", **asdict(verified)})
+            return 0
         config = load_config(args.config)
         if args.command in ("build", "pipeline"):
             metadata = ImageBuilder().build(config.build)
             _print({"stage": "build", "status": "passed", "metadata": metadata})
         if args.command in ("scan", "pipeline"):
-            summary = VulnerabilityScanner().scan(
-                config.build.image, config.policy, args.report
+            image = (
+                args.image
+                if args.command == "scan" and args.image
+                else config.build.image
             )
+            summary = VulnerabilityScanner().scan(image, config.policy, args.report)
             _print({"stage": "scan", "status": "passed", **asdict(summary)})
         if args.command in ("verify", "pipeline"):
             verified = RuntimeVerifier().verify(config.build.image, config.policy)

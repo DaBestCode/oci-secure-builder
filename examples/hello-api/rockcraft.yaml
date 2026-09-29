@@ -1,0 +1,60 @@
+name: oci-secure-hello
+title: OCI Secure Hello API
+summary: A chiselled Python API supervised by Pebble
+description: |
+  The Rockcraft counterpart to the repository's Docker-built hello API. It
+  demonstrates a bare base, fine-grained Chisel slices, a Pebble service and
+  readiness check, and non-root execution.
+version: "1.0"
+license: MIT
+
+base: bare
+build-base: ubuntu@24.04
+run-user: _daemon_
+
+platforms:
+  amd64:
+
+environment:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+
+services:
+  hello-api:
+    override: replace
+    command: /usr/bin/python3 /opt/hello-api/app.py
+    startup: enabled
+    working-dir: /opt/hello-api
+    environment:
+      PORT: "8080"
+    on-failure: shutdown
+
+checks:
+  api-ready:
+    override: replace
+    level: ready
+    period: 5s
+    timeout: 3s
+    threshold: 3
+    http:
+      url: http://127.0.0.1:8080/health
+
+parts:
+  python-runtime:
+    plugin: nil
+    stage-packages:
+      # These are Chisel slices, not complete Debian packages. The internet
+      # slice supplies http.server; net-data supplies json.
+      - base-files_release-info
+      - python3_core
+      - libpython3.12-stdlib_internet
+      - libpython3.12-stdlib_net-data
+
+  hello-api:
+    plugin: dump
+    source: .
+    source-type: local
+    organize:
+      app.py: opt/hello-api/app.py
+    stage:
+      - opt/hello-api/app.py

@@ -1,0 +1,79 @@
+name: Build and compare Rock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/hello-api/**"
+      - "src/oci_secure/**"
+      - "oci-secure.toml"
+      - ".github/workflows/rock.yml"
+  pull_request:
+    paths:
+      - "examples/hello-api/**"
+      - "src/oci_secure/**"
+      - "oci-secure.toml"
+      - ".github/workflows/rock.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rock-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pack chiselled Rock
+        id: pack
+        uses: canonical/craft-actions/rockcraft/pack@v1
+        with:
+          path: examples/hello-api
+          channel: latest/stable
+          verbosity: brief
+
+      - name: Import OCI archive into Docker
+        run: >-
+          sudo rockcraft.skopeo --insecure-policy copy
+          oci-archive:${{ steps.pack.outputs.rocks }}
+          docker-daemon:oci-secure-demo:rock
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          version: v0.74.0
+          cache: true
+      - run: python -m pip install -e .
+
+      - name: Scan Rock with the shared policy
+        run: >-
+          oci-secure scan --image oci-secure-demo:rock
+          --report reports/rock-trivy.json
+
+      - name: Verify Pebble, non-root UID, and readiness
+        run: oci-secure verify-rock oci-secure-demo:rock
+
+      - name: Build equivalent Docker image
+        run: >-
+          docker buildx build examples/hello-api
+          --file examples/hello-api/Dockerfile
+          --tag oci-secure-demo:docker
+          --platform linux/amd64
+          --load
+
+      - name: Record Rock and Docker comparison
+        run: >-
+          oci-secure compare oci-secure-demo:docker oci-secure-demo:rock
+          | tee reports/rock-vs-docker.json
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: rockcraft-evidence
+          path: |
+            ${{ steps.pack.outputs.rocks }}
+            reports/
+
