@@ -23,6 +23,32 @@ The slice choice is traceable to the application imports: `http.server` lives
 in the internet slice and `json` lives in net-data. Dependencies of those slices
 are resolved transitively by Chisel.
 
+## Recorded result
+
+Measured on 2026-09-28 on the same GitHub Actions `ubuntu-24.04` runner and
+`linux/amd64` target:
+
+| OCI fact | Docker image | Chiselled Rock |
+|---|---:|---:|
+| Docker-reported size | 118,703,283 bytes (113.2 MiB) | 43,869,378 bytes (41.8 MiB) |
+| Layers | 4 | 4 |
+| Configured user | `10001:10001` | `584792` (`_daemon_`) |
+| Entrypoint | none | `/usr/bin/pebble enter` |
+| Health metadata | OCI `HEALTHCHECK` | Pebble `api-ready` check |
+| Trivy findings | not recorded by this comparison job | 0 OS, 0 Pebble/Go findings |
+
+The Rock was **63.0% smaller** in this controlled run. That is an observed
+result, not a claim that Rockcraft always produces a smaller image: Docker
+base choice, selected Chisel slices, application dependencies, architecture,
+and changing Ubuntu packages all affect the result. The exported `.rock` OCI
+archive was 16 MiB because archive compression and Docker's unpacked image
+size are different measurements.
+
+The corresponding [successful workflow run](https://github.com/DaBestCode/oci-secure-builder/actions/runs/36513457799)
+preserves the build log and downloadable `rockcraft-evidence` artifact. The
+artifact contains the `.rock`, full Trivy JSON, and machine-readable comparison
+JSON rather than relying on a hand-written table alone.
+
 ## Reproduce the build
 
 The checked-in GitHub workflow is the reproducible path and avoids requiring a
@@ -78,6 +104,9 @@ docker run --rm oci-secure-demo:rock exec python3 -c \
   `rockcraft pack`.
 - The exact size winner is less important than explaining why the images differ:
   base choice, Pebble, metadata, Python slice granularity, and layer construction.
+- The Rock's configured user appears as numeric UID `584792` after OCI import.
+  The verifier does not trust that config alone: it executes Python inside the
+  running container and asserts that the observed UID is non-zero.
 
 ## Scope boundary
 
@@ -86,4 +115,3 @@ Rockcraft codebase. Upstream contributions should begin with an unclaimed issue,
 maintainer coordination, the Canonical contributor agreement, and Rockcraft's
 own tests. That process is more credible than submitting a duplicate patch solely
 for an interview.
-

@@ -1,6 +1,7 @@
 # OCI Secure Builder
 
 [![Build and security policy](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/ci.yml)
+[![Build and compare Rock](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/rock.yml/badge.svg)](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/rock.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A policy-driven Python CLI that builds Ubuntu-based OCI images with BuildKit,
@@ -24,7 +25,8 @@ interview rather than leaving the security claims as prose on a resume.
   code scanning, and publishes to GHCR only after the release scan succeeds.
 - **Rockcraft comparison:** the same API is also built from a bare base with
   Chisel slices, supervised by Pebble, scanned by the same policy, and verified
-  through a Rock-aware runtime gate.
+  through a Rock-aware runtime gate. The recorded CI run produced a 41.8 MiB
+  Rock versus a 113.2 MiB Docker image and reported zero Rock vulnerabilities.
 
 ## Architecture
 
@@ -108,6 +110,9 @@ excluded from the blocking count.
 4. Change `USER 10001:10001` to `USER root`, rebuild, and show `verify` fail.
 5. Open the Actions run and its downloadable Trivy report; explain that a tag
    can reach GHCR only after the same security gate passes.
+6. Open the Rock comparison artifact; contrast direct-process/OCI health with
+   Pebble supervision/readiness, then explain how the Chisel slices follow from
+   the application's Python imports.
 
 For a container-focused interview, continue with the
 [Docker versus Rockcraft experiment](docs/rockcraft-comparison.md). It packages
