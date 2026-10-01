@@ -15,8 +15,20 @@ if [[ "$runtime_uid" == "0" ]]; then
   exit 1
 fi
 
-kubectl exec deployment/hello-api -- python3 -c \
-  "import urllib.request; urllib.request.urlopen('http://hello-api/health', timeout=5).read()"
+kubectl exec deployment/hello-api -- python3 -c '
+import time
+import urllib.error
+import urllib.request
+
+for attempt in range(30):
+    try:
+        urllib.request.urlopen("http://hello-api/health", timeout=2).read()
+        break
+    except urllib.error.URLError:
+        if attempt == 29:
+            raise
+        time.sleep(1)
+'
 
 kubectl exec deployment/hello-api -- python3 -c '
 from pathlib import Path
