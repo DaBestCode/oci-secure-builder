@@ -21,8 +21,13 @@ interview rather than leaving the security claims as prose on a resume.
   a violation exits non-zero and stops publishing.
 - **Runtime hardening:** both image metadata and a real `id -u` container run are
   checked, preventing a misleading `USER` declaration from passing on its own.
+- **Cloud-runtime compatibility:** CI loads the exact scanned image into a kind
+  Kubernetes cluster backed by containerd. It verifies readiness and liveness
+  probes, Service networking, non-root execution, a read-only root filesystem,
+  zero effective capabilities, and `NoNewPrivs`.
 - **Supply-chain workflow:** GitHub Actions tests every change, uploads SARIF to
-  code scanning, and publishes to GHCR only after the release scan succeeds.
+  code scanning, and publishes the exact tested image to GHCR only after its
+  scan, runtime policy, and restricted Kubernetes deployment all succeed.
 - **Rockcraft comparison:** the same API is also built from a bare base with
   Chisel slices, supervised by Pebble, scanned by the same policy, and verified
   through a Rock-aware runtime gate. The recorded CI run produced a 41.8 MiB
@@ -35,13 +40,18 @@ oci-secure.toml
       │
       ▼
  Python CLI ──build──▶ Docker BuildKit ──▶ local OCI image
-      │                                      │
-      ├──scan──────────────────────────────▶ Trivy ──▶ JSON/SARIF
-      │                                      │
-      └──verify──▶ inspect + ephemeral run ◀─┘
-                         │
-                         ▼
-                 pass / policy violation
+      │                   ▲                  │        │
+      │                   └── layer cache ───┘        ├──▶ Trivy JSON/SARIF
+      │                                               │
+      └──policy──▶ inspect + ephemeral run ◀──────────┤
+                                                      │
+                                                      ▼
+                                             kind / containerd
+                                                      │
+                              restricted pod + probes + Service
+                                                      │
+                                                      ▼
+                                              pass, then publish
 ```
 
 The orchestration layer uses argument arrays rather than shell strings, making
@@ -94,6 +104,8 @@ oci-secure pipeline
 oci-secure benchmark oci-secure-demo:baseline oci-secure-demo:local
 oci-secure compare oci-secure-demo:local oci-secure-demo:rock
 oci-secure verify-rock oci-secure-demo:rock
+# With a kind cluster named oci-secure:
+./scripts/verify-kubernetes.sh
 ```
 
 Edit `oci-secure.toml` to change the context, tag, platform, labels, and allowed
@@ -108,8 +120,8 @@ excluded from the blocking count.
 3. Run the benchmark and explain why compiler and package-manager layers never
    enter the runtime stage.
 4. Change `USER 10001:10001` to `USER root`, rebuild, and show `verify` fail.
-5. Open the Actions run and its downloadable Trivy report; explain that a tag
-   can reach GHCR only after the same security gate passes.
+5. Show the restricted Kubernetes manifest and CI evidence; explain that kind
+   exercises the image through containerd, probes, and Service networking.
 6. Open the Rock comparison artifact; contrast direct-process/OCI health with
    Pebble supervision/readiness, then explain how the Chisel slices follow from
    the application's Python imports.
@@ -141,6 +153,11 @@ examples/hello-api/       hardened and baseline Ubuntu images
                           plus Rock packing and comparison
 oci-secure.toml           build and security policy as code
 scripts/demo.sh           reproducible end-to-end interview demo
+scripts/verify-kubernetes.sh  restricted Kubernetes integration verification
+deploy/kubernetes.yaml    non-root Deployment, probes, resources, and Service
 ```
+
+See [the résumé evidence matrix](docs/resume-evidence.md) for a claim-by-claim
+map from the résumé language to code, CI gates, and recorded measurements.
 
 Released under the [MIT License](LICENSE).

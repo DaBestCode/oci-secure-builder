@@ -35,8 +35,21 @@ jobs:
         with:
           version: v0.74.0
           cache: true
+      - name: Restore reusable BuildKit layers
+        uses: actions/cache@v5
+        with:
+          path: .buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('examples/hello-api/Dockerfile', 'examples/hello-api/app.py', 'oci-secure.toml') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ hashFiles('examples/hello-api/Dockerfile', 'examples/hello-api/app.py', 'oci-secure.toml') }}-
       - run: python -m pip install -e .
       - run: oci-secure pipeline --report reports/trivy.json
+      - name: Create Kubernetes compatibility cluster
+        uses: helm/kind-action@v1.14.0
+        with:
+          cluster_name: oci-secure
+      - name: Verify restricted Kubernetes runtime
+        run: ./scripts/verify-kubernetes.sh | tee reports/kubernetes-verification.txt
       - name: Create GitHub security report
         if: always()
         run: trivy image --format sarif --output reports/trivy.sarif oci-secure-demo:local
