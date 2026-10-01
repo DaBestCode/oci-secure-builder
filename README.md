@@ -2,6 +2,7 @@
 
 [![Build and security policy](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/ci.yml)
 [![Build and compare Rock](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/rock.yml/badge.svg)](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/rock.yml)
+[![Publish OCI image](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/publish.yml/badge.svg)](https://github.com/DaBestCode/oci-secure-builder/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A policy-driven Python CLI that builds Ubuntu-based OCI images with BuildKit,
@@ -80,6 +81,19 @@ chmod +x scripts/demo.sh
 
 The script invokes the source tree directly, so it also works before installing
 the package into a virtual environment.
+
+To run the publicly published, fully gated release:
+
+```bash
+docker pull ghcr.io/dabestcode/oci-secure-demo:v1.0.1
+docker run --rm --publish 8080:8080 ghcr.io/dabestcode/oci-secure-demo:v1.0.1
+curl --fail http://127.0.0.1:8080/health
+```
+
+Release `v1.0.1` and `latest` point to registry digest
+`sha256:ea2091462d5260e1e327c161f48bdaeada364365c401ed0c02ae4e5642bef657`.
+The [release workflow](https://github.com/DaBestCode/oci-secure-builder/actions/runs/36804464857)
+shows the scan and both runtime gates completing before the push.
 
 Recorded output (the percentage can change with upstream Ubuntu packages):
 

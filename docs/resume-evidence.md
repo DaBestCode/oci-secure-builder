@@ -16,6 +16,11 @@ implementation, an automated check, and—where appropriate—a measured result.
 | Cloud-native runtime compatibility | The exact scanned image is loaded into kind and run through Kubernetes/containerd with probes, resources, Service discovery, read-only rootfs, seccomp, dropped capabilities, and disabled privilege escalation | CI waits for rollout, calls the Service from the pod, and reads `/proc` to verify `CapEff=0`, `NoNewPrivs=1`, and a read-only root mount |
 | Gates before registry publishing | The tag workflow builds one local image, runs the scan and both runtime gates, then tags and pushes that same image object | Login and `docker push` occur only after all prior steps return successfully |
 
+The end-to-end [v1.0.1 release run](https://github.com/DaBestCode/oci-secure-builder/actions/runs/36804464857)
+passed every gate and published the anonymously pullable image as
+`ghcr.io/dabestcode/oci-secure-demo:v1.0.1`. The versioned and `latest` tags
+share digest `sha256:ea2091462d5260e1e327c161f48bdaeada364365c401ed0c02ae4e5642bef657`.
+
 ## Precise terminology
 
 Use **non-root container execution** in interviews and on the résumé. The
